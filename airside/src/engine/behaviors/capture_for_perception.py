@@ -30,6 +30,9 @@ class CaptureForPerception(py_trees.behaviour.Behaviour):
     What it has to do (``tests/test_capture.py`` checks all of this):
 
     ``initialise()``
+
+
+        
         Write down the ``index`` of whatever frame is on ``LATEST_FRAME``
         right now, or ``None`` if there isn't one yet. That's what you'll
         compare against. Also reset your tick counter. py_trees calls this
@@ -51,6 +54,7 @@ class CaptureForPerception(py_trees.behaviour.Behaviour):
     and in the tests it's a fake that just records what it was given. Only
     use its two methods, ``publish_image(frame)`` and
     ``publish_status(status_dict)``.
+
 
     Args:
         name: The name shown for this behavior when the tree gets printed.
@@ -92,7 +96,12 @@ class CaptureForPerception(py_trees.behaviour.Behaviour):
         capture at the next waypoint ignore the picture from this one.
         """
         # TODO(bootcamper): implement.
-        raise NotImplementedError
+        frame = self._latest_frame()
+        if frame is None:
+            self._start_index = None
+        else:
+            self._start_index = frame.index
+        self._ticks = 0
 
     def update(self) -> py_trees.common.Status:
         """
@@ -102,4 +111,16 @@ class CaptureForPerception(py_trees.behaviour.Behaviour):
         we wait. The class docstring says exactly what to do.
         """
         # TODO(bootcamper): implement.
-        raise NotImplementedError
+        frame = self._latest_frame()
+        if frame is not None and frame.index != self._start_index:
+            self._publisher.publish_image(frame)
+            self._publisher.publish_status(
+                {"phase": "capture", "frame_index": frame.index}
+            )
+            return py_trees.common.Status.SUCCESS
+        self._ticks += 1
+        if self._ticks >= self._timeout_ticks:
+            return py_trees.common.Status.FAILURE
+        return py_trees.common.Status.RUNNING
+
+        
