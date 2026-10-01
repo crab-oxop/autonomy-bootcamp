@@ -15,6 +15,9 @@ here or in any SimCamera built with the same size, and frames with different
 indexes look different. Fill values, gradients, and
 ``numpy.random.default_rng(index)`` all work.
 """
+import time
+
+import numpy as np
 
 from .abstract_camera import AbstractCamera
 from .frame import CameraFrame
@@ -28,29 +31,52 @@ class SimCamera(AbstractCamera):
     """
 
     def __init__(self, width: int = 64, height: int = 48) -> None:
+        self._width = width
+        self._height = height
+        self._initialized = False
+        self._index = 0
+        self._last_timestamp = None
+
         """Save the settings and set up whatever state you need.
 
         Args:
             width: Frame width in pixels.
             height: Frame height in pixels.
         """
-        # TODO(bootcamper): save the arguments and set up your state
-        # (FixedCamera.__init__ shows you what that looks like).
-        raise NotImplementedError
+
 
     def initialize_camera(self) -> bool:
+        self._initialized = True
+        self._index = 0
+        self._last_timestamp = None
+        return True
         """Turn the fake camera on and start counting from index 0."""
-        # TODO(bootcamper): implement.
-        raise NotImplementedError
+
+
 
     def capture_frame(self) -> CameraFrame:
+        if not self._initialized:
+            raise RuntimeError("Camera is not initialized.")
+
+        rgb = np.full((self._height, self._width, 3), self._index % 256, dtype=np.uint8)
+        timestamp = time.monotonic()
+        if self._last_timestamp is not None and timestamp <= self._last_timestamp:
+            timestamp = self._last_timestamp + 1e-6
+        self._last_timestamp = timestamp
+
+        frame = CameraFrame(rgb=rgb.copy(), timestamp=timestamp, index=self._index)
+        self._index += 1
+        return frame
+
+        
         """Make up the next frame."""
         # TODO(bootcamper): implement. Don't forget: RuntimeError if the
         # camera isn't on, the same pixels every time for a given index,
         # timestamps that always go up, and returning a copy.
-        raise NotImplementedError
+
 
     def stop(self) -> None:
+        self._initialized = False
         """Turn the fake camera off. Safe to call more than once."""
-        # TODO(bootcamper): implement.
-        raise NotImplementedError
+
+
